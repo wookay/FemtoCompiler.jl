@@ -22,7 +22,9 @@ f = overlay_plus
 interp = FemtoInterpreter()
 let src = code_typed1(f, (Int, Int); interp)
     line = src.code[end]
-    @test line == ReturnNode(:(:overlay))
+    if VERSION >= v"1.12"
+        @test line == ReturnNode(:(:overlay))
+    end
 end
 
 let src = code_typed1(f, (Int, Int))

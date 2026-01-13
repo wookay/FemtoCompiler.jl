@@ -8,9 +8,6 @@ using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
            _bits_findnext
 import .CC: typeinf_local
 
-include("newinterp.jl")
-@newinterp FemtoInterpreter
-
 # from julia/Compiler/src/abstractinterpretation.jl
 # function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState)
 function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState)
