@@ -1,5 +1,6 @@
 module FemtoCompiler
 
+# from julia/Compiler/test/newinterp.jl
 include("newinterp.jl")
 @newinterp FemtoInterpreter
 
