@@ -5,7 +5,7 @@ include("newinterp.jl")
 @newinterp FemtoInterpreter
 
 if VERSION >= v"1.12"
-    include("typeinf_local.jl")
+    include("abstractinterpretation.jl")
 end
 
 end # module FemtoCompiler

@@ -2,10 +2,20 @@
 
 using Core: Compiler as CC
 using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
-           VarTable, GotoNode, GotoIfNot, ReturnNode,
+           VarTable, GotoNode, GotoIfNot, ReturnNode, EnterNode, PhiNode,
+           Future, RTEffects, Bottom, Const, Conditional, SlotNumber, SlotRefinement,
+           IR_FLAG_NOTHROW,
            is_inferred, typeinf_lattice, abstract_eval_value,
-           update_bestguess!, update_cycle_worklists!,
-           _bits_findnext
+           update_cycle_worklists!, _bits_findnext, abstract_eval_basic_statement,
+           merge_override_effects!, has_curr_ssaflag, record_ssa_assign!,
+           update_exc_bestguess!, propagate_to_error_handler!,
+           stoverwrite1!, stoverwrite!, ssa_def_slot, maybe_extract_const_bool, ⊑,
+           add_curr_ssaflag!, update_bbstate!, handle_control_backedge!, isexpr, slot_id,
+           conditional_change, condition_object_change, update_bestguess!
+if VERSION >= v"1.14-DEV"
+using .CC: conditional_valid, strefine1!
+end
+
 import .CC: typeinf_local
 
 # from julia/Compiler/src/abstractinterpretation.jl
