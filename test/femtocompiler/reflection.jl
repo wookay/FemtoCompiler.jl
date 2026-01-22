@@ -1,4 +1,5 @@
-module test_femtocompiler_reflection
+using Jive
+@If VERSION >= v"1.12" module test_femtocompiler_reflection
 
 using Test
 using FemtoCompiler: FemtoInterpreter
