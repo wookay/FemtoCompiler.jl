@@ -1,0 +1,80 @@
+# module FemtoCompiler
+
+using Core: Compiler as CC
+using .CC: typeinf_frame, specialize_method, MethodMatch, Method, SimpleVector, MethodInstance
+using Base: normalize_typevars, is_nospecializeinfer, get_nospecializeinfer_sig
+
+# from julia/base/runtime_internals.jl
+# function specialize_method(method::Method, @nospecialize(atype), sparams::SimpleVector; preexisting::Bool=false)
+function _specialize_method(method::Method, @nospecialize(atype), sparams::SimpleVector; preexisting::Bool=false)
+    @inline
+    if isa(atype, UnionAll)
+        atype, sparams = normalize_typevars(method, atype, sparams)
+    end
+    if is_nospecializeinfer(method) # TODO: this shouldn't be here
+        atype = get_nospecializeinfer_sig(method, atype, sparams)
+    end
+    if preexisting
+        # check cached specializations
+        # for an existing result stored there
+        return ccall(:jl_specializations_lookup, Any, (Any, Any), method, atype)::Union{Nothing,MethodInstance}
+    end
+    return ccall(:jl_specializations_get_linfo, Ref{MethodInstance}, (Any, Any, Any), method, atype, sparams)
+end
+# function specialize_method(match::Core.MethodMatch; kwargs...)
+function _specialize_method(match::Core.MethodMatch; kwargs...)
+    return _specialize_method(match.method, match.spec_types, match.sparams; kwargs...)
+end
+
+
+import .CC: typeinf_code
+# from julia/Compiler/src/typeinfer.jl
+# typeinf_code
+function typeinf_code(interp::FemtoInterpreter, match::MethodMatch, run_optimizer::Bool)
+    typeinf_code(interp, _specialize_method(match), run_optimizer)
+end
+typeinf_code(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, run_optimizer::Bool) =
+    typeinf_code(interp, _specialize_method(method, atype, sparams), run_optimizer)
+function typeinf_code(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool)
+    frame = typeinf_frame(interp, mi, run_optimizer)
+    frame === nothing && return nothing
+    return frame.src
+end
+
+if VERSION >= v"1.14.0-DEV.60" # julia commit 998cb27e4c83364a38378841c88c954ac1e7eb59
+using .CC: InferenceResult, InferenceState, Const, OptimizationState, typeinf_lattice, typeinf, is_inferred, result_is_constabi, codeinfo_for_const
+import .CC: typeinf_frame
+# from julia/Compiler/src/typeinfer.jl
+# typeinf_frame
+typeinf_frame(interp::FemtoInterpreter, match::MethodMatch, run_optimizer::Bool) =
+    typeinf_frame(interp, specialize_method(match), run_optimizer)
+typeinf_frame(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector,
+              run_optimizer::Bool) =
+    typeinf_frame(interp, specialize_method(method, atype, sparams), run_optimizer)
+function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool)
+    result = InferenceResult(mi, typeinf_lattice(interp))
+    frame = InferenceState(result, #=cache_mode=#:no, interp)
+    frame === nothing && return nothing
+    typeinf(interp, frame)
+    is_inferred(frame) || return nothing
+    if run_optimizer
+        if result_is_constabi(interp, frame.result)
+            rt = frame.result.result::Const
+            src = codeinfo_for_const(interp, frame.linfo, frame.valid_worlds, Core.svec(frame.edges...), rt.val)
+        else
+            opt = OptimizationState(frame, interp)
+            optimize(interp, opt, frame.result)
+            src = ir_to_codeinf!(opt, frame, Core.svec(opt.inlining.edges...))
+        end
+        result.src = frame.src = src
+    end
+    return frame
+end
+end # if VERSION >= v"1.14.0-DEV.60"
+
+#=
+pkgid = Base.PkgId(Base.UUID("92d42091-2d14-46a9-a897-febf9702e17e"), "FemtoCompiler")
+precompiled = Base.Precompilation.precompilepkgs([pkgid])
+=#
+
+# module FemtoCompiler
