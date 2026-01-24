@@ -42,7 +42,8 @@ function typeinf_code(interp::FemtoInterpreter, mi::MethodInstance, run_optimize
 end
 
 if VERSION >= v"1.14.0-DEV.60" # julia commit 998cb27e4c83364a38378841c88c954ac1e7eb59
-using .CC: InferenceResult, InferenceState, Const, OptimizationState, typeinf_lattice, typeinf, is_inferred, result_is_constabi, codeinfo_for_const
+using .CC: InferenceResult, InferenceState, Const, OptimizationState,
+           typeinf_lattice, typeinf, is_inferred, result_is_constabi, codeinfo_for_const, optimize, ir_to_codeinf!
 import .CC: typeinf_frame
 # from julia/Compiler/src/typeinfer.jl
 # typeinf_frame
