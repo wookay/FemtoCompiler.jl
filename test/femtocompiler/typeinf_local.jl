@@ -6,8 +6,6 @@ using Core: Compiler as CC
 using Base.Experimental: @MethodTable, @overlay
 using FemtoCompiler: FemtoCompiler, FemtoInterpreter
 
-using .CC: code_typed
-
 @MethodTable OVERLAY_PLUS_MT
 function overlay_plus end
 overlay_plus(x, y) = :default

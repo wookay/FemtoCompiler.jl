@@ -1,26 +1,13 @@
 # module FemtoCompiler
 
-using Base: default_tt, code_typed_opaque_closure, signature_type
-
-# from julia/base/reflection.jl
-# code_typed
-function code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); kwargs...)
-    if isa(f, Core.OpaqueClosure)
-        return code_typed_opaque_closure(f, types; kwargs...)
-    end
-    tt = signature_type(f, types)
-    return Base.code_typed_by_type(tt; kwargs...)
-end
-
-using Base: invoke_default_compiler, IRShow, to_tuple_type, invoke_interp_compiler, raise_match_failure, remove_linenums!
-import Base: code_typed_by_type
+using Base: get_world_counter, invoke_default_compiler, IRShow, to_tuple_type, invoke_interp_compiler, raise_match_failure, remove_linenums!
 # from julia/base/reflection.jl
 # code_typed_by_type
-function code_typed_by_type(@nospecialize(tt::Type);
+function _code_typed_by_type(@nospecialize(tt::Type);
                             optimize::Bool=true,
                             debuginfo::Symbol=:default,
                             world::UInt=get_world_counter(),
-                            interp::FemtoInterpreter=nothing)
+                            interp::Union{Nothing,FemtoInterpreter}=nothing)
     passed_interp = interp
     interp = passed_interp === nothing ? invoke_default_compiler(:_default_interp, world) : interp
     (ccall(:jl_is_in_pure_context, Bool, ()) || world == typemax(UInt)) &&
@@ -48,6 +35,18 @@ function code_typed_by_type(@nospecialize(tt::Type);
         end
     end
     return asts
-end
+end # function _code_typed_by_type
+
+# FemtoCompiler.code_typed
+using Base: default_tt, code_typed_opaque_closure, signature_type
+# from julia/base/reflection.jl
+# code_typed
+function code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); kwargs...)
+    if isa(f, Core.OpaqueClosure)
+        return code_typed_opaque_closure(f, types; kwargs...)
+    end
+    tt = signature_type(f, types)
+    return _code_typed_by_type(tt; kwargs...)
+end # function code_typed
 
 # module FemtoCompiler
