@@ -1,5 +1,5 @@
 using Jive
-@useinside Main module test_femtocompiler_typeinf_local
+@If VERSION >= v"1.12" module test_femtocompiler_typeinf_local
 
 using Test
 using Core: CodeInfo, ReturnNode

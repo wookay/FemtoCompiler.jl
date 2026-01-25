@@ -1,7 +1,10 @@
 # module FemtoCompiler
 
-using Base: get_world_counter, invoke_default_compiler, typename, IRShow, to_tuple_type, raise_match_failure, remove_linenums!
+using Base: get_world_counter, typename, IRShow, to_tuple_type, remove_linenums!
 
+if VERSION >= v"1.12.0-DEV.1571" # julia commit cd7250da83
+
+using Base: invoke_default_compiler, raise_match_failure
 import Base: invoke_interp_compiler
 # from julia/base/reflection.jl
 # invoke_interp_compiler
@@ -68,5 +71,7 @@ function femto_code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); 
     tt = signature_type(f, types)
     return _code_typed_by_type(tt; kwargs...)
 end # function femto_code_typed
+
+end # if VERSION >= v"1.12.0-DEV.1571"
 
 # module FemtoCompiler

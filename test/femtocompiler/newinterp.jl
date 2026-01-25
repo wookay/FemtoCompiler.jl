@@ -1,4 +1,6 @@
-module test_femtocompiler_newinterp
+using Jive
+@If VERSION >= v"1.14.0-DEV.60" module test_femtocompiler_newinterp
+# Compiler.OverlayCodeCache  julia commit 998cb27e4c
 
 using Test
 using Core.Compiler: Compiler as CC
