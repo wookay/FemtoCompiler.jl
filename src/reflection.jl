@@ -1,6 +1,25 @@
 # module FemtoCompiler
 
-using Base: get_world_counter, invoke_default_compiler, IRShow, to_tuple_type, invoke_interp_compiler, raise_match_failure, remove_linenums!
+using Base: get_world_counter, invoke_default_compiler, typename, IRShow, to_tuple_type, raise_match_failure, remove_linenums!
+
+import Base: invoke_interp_compiler
+# from julia/base/reflection.jl
+# invoke_interp_compiler
+function invoke_interp_compiler(interp::FemtoInterpreter, fname::Symbol, args...)
+    if interp === nothing
+        return invoke_default_compiler(fname, args...)
+    else
+        T = typeof(interp)
+        while true
+            Tname = typename(T).name
+            Tname === :Any && error("Expected AbstractInterpreter")
+            Tname === :AbstractInterpreter && break
+            T = supertype(T)
+        end
+        return getglobal(typename(T).module, fname)(args...)
+    end
+end
+
 # from julia/base/reflection.jl
 # code_typed_by_type
 function _code_typed_by_type(@nospecialize(tt::Type);
@@ -26,7 +45,8 @@ function _code_typed_by_type(@nospecialize(tt::Type);
     asts = []
     for match in matches.matches
         match = match::Core.MethodMatch
-        code = invoke_interp_compiler(passed_interp, :typeinf_code, interp, match, optimize)
+        fname = :typeinf_code
+        code = invoke_interp_compiler(passed_interp, fname, interp, match, optimize)
         if code === nothing
             push!(asts, match.method => Any)
         else
@@ -37,16 +57,16 @@ function _code_typed_by_type(@nospecialize(tt::Type);
     return asts
 end # function _code_typed_by_type
 
-# FemtoCompiler.code_typed
+# FemtoCompiler.femto_code_typed
 using Base: default_tt, code_typed_opaque_closure, signature_type
 # from julia/base/reflection.jl
 # code_typed
-function code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); kwargs...)
+function femto_code_typed(@nospecialize(f), @nospecialize(types=default_tt(f)); kwargs...)
     if isa(f, Core.OpaqueClosure)
         return code_typed_opaque_closure(f, types; kwargs...)
     end
     tt = signature_type(f, types)
     return _code_typed_by_type(tt; kwargs...)
-end # function code_typed
+end # function femto_code_typed
 
 # module FemtoCompiler
