@@ -15,7 +15,7 @@ overlay_plus(x, y) = :default
 CC.method_table(interp::FemtoInterpreter) = CC.OverlayMethodTable(CC.get_inference_world(interp), OVERLAY_PLUS_MT)
 
 # from julia/Compiler/test/irutils.jl
-code_typed1(args...; kwargs...) = first(only(FemtoCompiler.femto_code_typed(args...; kwargs...)))::CodeInfo
+code_typed1(args...; kwargs...) = first(only(Base.code_typed(args...; kwargs...)))::CodeInfo
 f = overlay_plus
 
 let src = code_typed1(f, (Int, Int))
