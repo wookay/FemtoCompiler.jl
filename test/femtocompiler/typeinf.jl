@@ -1,0 +1,65 @@
+using Jive
+@If VERSION >= v"1.12" module test_femtocompiler_typeinf
+
+using Test
+using Core: CodeInfo, ReturnNode
+using Core: Compiler as CC
+using Base: MethodInstance
+using Base.Experimental: @MethodTable, @overlay
+using FemtoCompiler: FemtoCompiler, FemtoInterpreter
+
+@MethodTable OVERLAY_PLUS_MT
+function overlay_plus end
+overlay_plus(x, y) = :default
+@overlay OVERLAY_PLUS_MT overlay_plus(x::Int, y::Int) = :overlay
+
+CC.method_table(interp::FemtoInterpreter) = CC.OverlayMethodTable(CC.get_inference_world(interp), OVERLAY_PLUS_MT)
+
+# from julia/Compiler/test/irutils.jl
+code_typed1(args...; kwargs...) = first(only(Base.code_typed(args...; kwargs...)))::CodeInfo
+f = overlay_plus
+
+let src = code_typed1(f, (Int, Int))
+    line = src.code[end]
+    @test line == ReturnNode(:(:default))
+end
+
+interp = FemtoInterpreter()
+let src = code_typed1( f, (Int, Int); interp)
+    line = src.code[end]
+    if VERSION >= v"1.12"
+        @test line == ReturnNode(:(:overlay))
+    end
+end
+
+
+f = +
+types = (Int, Int)
+
+m = methods(f, types)
+mi::MethodInstance = m[1].specializations[1]
+
+𝕃ᵢ = CC.typeinf_lattice(interp)
+@test 𝕃ᵢ isa CC.InferenceLattice
+
+@test CC.typeinf_type(interp, mi) === Int
+
+frame = CC.typeinf_frame(interp, mi, #=run_optimizer=#false)
+@test frame isa CC.InferenceState
+
+result = CC.InferenceResult(mi, 𝕃ᵢ)
+@test result.argtypes == [CC.Const(+), Int, Int]
+
+frame = CC.InferenceState(result, #=cache_mode=#:no, interp)
+@test CC.is_inferred(frame) === false
+@test CC.typeinf(interp, frame)::Bool
+@test CC.is_inferred(frame) === true
+
+result = CC.InferenceResult(mi, 𝕃ᵢ)
+frame = CC.InferenceState(result, #=cache_mode=#:no, interp)
+nextresult1 = CC.CurrentState()
+@test CC.is_inferred(frame) === false
+nextresult2 = CC.typeinf_local(interp, frame, nextresult1)
+@test nextresult2 isa CC.CurrentState
+
+end # module test_femtocompiler_typeinf
