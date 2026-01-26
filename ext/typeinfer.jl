@@ -2,7 +2,7 @@
 
 using .CC: SimpleVector, AbsIntState,
            MethodMatch, MethodInstance, InferenceResult, typeinf, result_is_constabi, codeinfo_for_const,
-           OptimizationState, optimize, ir_to_codeinf!, get_inference_world
+           OptimizationState, optimize, get_inference_world
 
 # from julia/Compiler/src/typeinfer.jl
 import .CC: typeinf_edge
@@ -122,6 +122,8 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
 end
 
 # from julia/Compiler/src/typeinfer.jl
+if VERSION >= v"1.13.0-DEV.483" # julia commit 3864b18af6
+using .CC: ir_to_codeinf!
 import .CC: typeinf_frame
 typeinf_frame(interp::FemtoInterpreter, match::MethodMatch, run_optimizer::Bool) =
     typeinf_frame(interp, specialize_method(match), run_optimizer)
@@ -147,5 +149,6 @@ function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimiz
     end
     return frame
 end # function typeinf_frame
+end # if VERSION >= v"1.13.0-DEV.483"
 
 # module CompilerExt
