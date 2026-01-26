@@ -37,4 +37,8 @@ jobs:
     - name: trace-compile-timing
       if: ${{ matrix.julia-version == '1.12.4' || matrix.julia-version == 'nightly' }}
       run: |
-           julia -e 'using Pkg; Pkg.add(path="."); Pkg.test("FemtoCompiler"; julia_args=["--trace-compile-timing", "--trace-compile=stderr", "--compiled-modules=yes", "--color=yes"])'
+           julia -e 'using Pkg; Pkg.add("Jive")'
+           julia -e 'using Pkg; Pkg.develop(path=".")'
+           cd test/
+           julia --trace-compile-timing --trace-compile=stderr --compiled-modules=yes --color=yes runtests.jl
+           cd ../
