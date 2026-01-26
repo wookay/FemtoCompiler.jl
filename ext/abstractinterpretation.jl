@@ -1,6 +1,5 @@
-# module FemtoCompiler
+# module CompilerExt
 
-using Core: Compiler as CC
 using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
            VarTable, GotoNode, GotoIfNot, ReturnNode, EnterNode, PhiNode,
            Future, RTEffects, Bottom, Const, Conditional, SlotNumber, SlotRefinement,
@@ -11,14 +10,14 @@ using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
            update_exc_bestguess!, propagate_to_error_handler!,
            stoverwrite1!, stoverwrite!, ssa_def_slot, maybe_extract_const_bool, ⊑,
            add_curr_ssaflag!, update_bbstate!, handle_control_backedge!, isexpr, slot_id,
-           conditional_change, condition_object_change, update_bestguess!
+           conditional_change, condition_object_change, update_bestguess!,
+           MethodMatch, MethodInstance, InferenceResult, typeinf, result_is_constabi, codeinfo_for_const
 if VERSION >= v"1.14-DEV"
 using .CC: conditional_valid, strefine1!
 end
 
 import .CC: typeinf_local
 # from julia/Compiler/src/abstractinterpretation.jl
-# function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState)
 function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState)
     @assert !is_inferred(frame)
     W = frame.ip
@@ -267,4 +266,4 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
     return CurrentState()
 end # function typeinf_local
 
-# module FemtoCompiler
+# module CompilerExt

@@ -1,8 +1,6 @@
 module FemtoCompiler
 
+using Core.Compiler: Compiler as CC
 include("types.jl")
-if VERSION >= v"1.12"
-    include("abstractinterpretation.jl")
-end
 
 end # module FemtoCompiler
