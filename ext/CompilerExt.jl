@@ -7,7 +7,7 @@ include("newinterp.jl")
 if VERSION >= v"1.12"
     include("abstractinterpretation.jl")
     include("typeinfer.jl")
+    include("precompile.jl")
 end
-include("precompile.jl")
 
 end # module CompilerExt

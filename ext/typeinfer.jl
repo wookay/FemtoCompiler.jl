@@ -3,11 +3,14 @@
 using .CC: SimpleVector, AbsIntState,
            MethodMatch, MethodInstance, InferenceResult, typeinf, result_is_constabi, codeinfo_for_const,
            OptimizationState, optimize, get_inference_world, specialize_method, CACHE_MODE_GLOBAL, is_stmt_inline,
-           get_curr_ssaflag, code_cache, CodeInstance, may_optimize, is_inlineable, ci_get_source, CACHE_MODE_LOCAL,
+           get_curr_ssaflag, code_cache, CodeInstance, may_optimize, is_inlineable, CACHE_MODE_LOCAL,
            return_cached_result, InferenceParams, add_remark!, Future, MethodCallResult, Effects, is_cached,
            frame_parent, resolve_call_cycle!, _time_ns, engine_reserve, engine_reject, typeinf_lattice, InferenceState,
-           assign_parentchild!, _schedule_edge_infer_task!, update_valid_age!, adjust_effects, effects_for_cycle,
+           assign_parentchild!, update_valid_age!, adjust_effects, effects_for_cycle,
            refine_exception_type, add_cycle_backedge!
+if VERSION >= v"1.14.0-DEV.60"
+using .CC: ci_get_source, _schedule_edge_infer_task!
+end
 
 # from julia/Compiler/src/typeinfer.jl
 import .CC: typeinf_edge
