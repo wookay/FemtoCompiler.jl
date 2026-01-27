@@ -37,8 +37,8 @@ jobs:
     - name: trace-compile-timing
       if: ${{ matrix.julia-version == '1.12.4' || matrix.julia-version == 'nightly' }}
       run: |
-           julia -e 'using Pkg; Pkg.add("Jive")'
            julia -e 'using Pkg; Pkg.develop(path=".")'
+           julia -e 'using Pkg; Pkg.add("Jive")'
            cd test/
            julia --trace-compile-timing --trace-compile=stderr --compiled-modules=yes --color=yes runtests.jl
            cd ../
