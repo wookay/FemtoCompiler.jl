@@ -1,10 +1,5 @@
 # module CompilerExt
 
-precompile(Base.invoke_interp_compiler, (FemtoInterpreter, Symbol, FemtoInterpreter, Vararg{Any}))
-precompile(CC._findall_matches, (FemtoInterpreter, Any))
-precompile(CC.typeinf_code, (FemtoInterpreter, MethodMatch, Bool))
-precompile(CC.typeinf_type, (FemtoInterpreter, MethodInstance))
-
 # ext/abstractinterpretation.jl
 precompile(CC.typeinf_local, (FemtoInterpreter, InferenceState, CurrentState))
 
@@ -25,5 +20,19 @@ precompile(CC.codegen_cache, (FemtoInterpreter,))
 end
 precompile(CC.infer_compilation_signature, (FemtoInterpreter,))
 precompile(CC.code_cache, (FemtoInterpreter, WorldRange))
+
+# Base
+precompile(Base.invoke_interp_compiler, (FemtoInterpreter, Symbol, FemtoInterpreter, Vararg{Any}))
+
+# CC
+precompile(CC._findall_matches, (FemtoInterpreter, Any))
+precompile(CC.typeinf_code, (FemtoInterpreter, MethodMatch, Bool))
+precompile(CC.typeinf_type, (FemtoInterpreter, MethodInstance))
+precompile(CC.doworkloop, (FemtoInterpreter, CC.InferenceState))
+precompile(CC.finish_nocycle, (FemtoInterpreter, CC.InferenceState, UInt64))
+if VERSION >= v"1.13.0-DEV.483" # julia commit 3864b18af6
+precompile(CC.compute_inlining_cost, (FemtoInterpreter, CC.InferenceResult, CC.OptimizationResult))
+end
+precompile(CC.statement_costs!, (FemtoInterpreter, Array{Int, 1}, Array{Any, 1}, Core.CodeInfo, Core.MethodMatch))
 
 # module CompilerExt
