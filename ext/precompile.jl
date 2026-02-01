@@ -1,15 +1,11 @@
 # module CompilerExt
 
-# ext/abstractinterpretation.jl
-precompile(CC.typeinf_local, (FemtoInterpreter, InferenceState, CurrentState))
+### FemtoInterpreter
 
-# ext/typeinfer.jl
-precompile(CC.typeinf_edge, (FemtoInterpreter, Method, Any, SimpleVector, AbsIntState, Bool, Bool))
-precompile(CC.typeinf_frame, (FemtoInterpreter, MethodMatch, Bool))
-precompile(CC.typeinf_frame, (FemtoInterpreter, Method, Any, SimpleVector, Bool))
-precompile(CC.typeinf_frame, (FemtoInterpreter, MethodInstance, Bool))
+# TODO: Still recompiled
+#=    6.5 ms =# precompile(Tuple{typeof(Base.Compiler._findall_matches), FemtoCompiler.FemtoInterpreter, Any}) # recompile
 
-# ext/newinterp.jl
+# FemtoInterpreter - ext/newinterp.jl
 precompile(CC.InferenceParams, (FemtoInterpreter,))
 precompile(CC.OptimizationParams, (FemtoInterpreter,))
 precompile(CC.get_inference_world, (FemtoInterpreter,))
@@ -21,11 +17,19 @@ end
 precompile(CC.infer_compilation_signature, (FemtoInterpreter,))
 precompile(CC.code_cache, (FemtoInterpreter, WorldRange))
 
-# Base
+# FemtoInterpreter - ext/abstractinterpretation.jl
+precompile(CC.typeinf_local, (FemtoInterpreter, InferenceState, CurrentState))
+
+# FemtoInterpreter - ext/typeinfer.jl
+precompile(CC.typeinf_edge, (FemtoInterpreter, Method, Any, SimpleVector, AbsIntState, Bool, Bool))
+precompile(CC.typeinf_frame, (FemtoInterpreter, MethodMatch, Bool))
+precompile(CC.typeinf_frame, (FemtoInterpreter, Method, Any, SimpleVector, Bool))
+precompile(CC.typeinf_frame, (FemtoInterpreter, MethodInstance, Bool))
+
+# FemtoInterpreter - Base
 precompile(Base.invoke_interp_compiler, (FemtoInterpreter, Symbol, FemtoInterpreter, Vararg{Any}))
 
-# CC
-precompile(CC._findall_matches, (FemtoInterpreter, Any))
+# FemtoInterpreter - CC
 precompile(CC.typeinf_code, (FemtoInterpreter, MethodMatch, Bool))
 precompile(CC.typeinf_type, (FemtoInterpreter, MethodInstance))
 precompile(CC.doworkloop, (FemtoInterpreter, CC.InferenceState))
@@ -34,5 +38,11 @@ if VERSION >= v"1.13.0-DEV.483" # julia commit 3864b18af6
 precompile(CC.compute_inlining_cost, (FemtoInterpreter, CC.InferenceResult, CC.OptimizationResult))
 end
 precompile(CC.statement_costs!, (FemtoInterpreter, Array{Int, 1}, Array{Any, 1}, Core.CodeInfo, Core.MethodMatch))
+
+### CC.NativeInterpreter
+precompile(Tuple{typeof(CC._infer_effects), CC.NativeInterpreter, Any, Bool})
+precompile(Tuple{typeof(CC.compute_inlining_cost), CC.NativeInterpreter, CC.InferenceResult, CC.OptimizationResult})
+precompile(Tuple{typeof(CC.typeinf_code), CC.NativeInterpreter, Core.MethodMatch, Bool})
+precompile(Tuple{typeof(CC.typeinf_type), CC.NativeInterpreter, Core.MethodMatch})
 
 # module CompilerExt
