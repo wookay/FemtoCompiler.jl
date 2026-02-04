@@ -4,8 +4,8 @@
 
 * Doors
 ```
-alias jd="julia --trace-compile-timing --trace-compile=stderr --compiled-modules=yes -e 'using Doors; serve(; into=Main)'  "
-alias jc="julia --trace-compile-timing --trace-compile=stderr --compiled-modules=yes -e 'using Doors; runargs()'  "
+alias jd="julia -i --trace-compile-timing --trace-compile=stderr --compiled-modules=yes -e 'using Doors; serve(; into=Main)'  "
+alias jc="julia    --trace-compile-timing --trace-compile=stderr --compiled-modules=yes -e 'using Doors; runargs()'  "
 ```
 
 ### repositories
