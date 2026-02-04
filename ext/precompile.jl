@@ -2,9 +2,6 @@
 
 ### FemtoInterpreter
 
-# TODO: Still recompiled
-#=    6.5 ms =# precompile(Tuple{typeof(Base.Compiler._findall_matches), FemtoCompiler.FemtoInterpreter, Any}) # recompile
-
 # FemtoInterpreter - ext/newinterp.jl
 precompile(CC.InferenceParams, (FemtoInterpreter,))
 precompile(CC.OptimizationParams, (FemtoInterpreter,))
