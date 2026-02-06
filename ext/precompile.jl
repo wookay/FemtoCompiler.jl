@@ -38,8 +38,9 @@ end
 precompile(CC.statement_costs!, (FemtoInterpreter, Array{Int, 1}, Array{Any, 1}, Core.CodeInfo, Core.MethodMatch))
 
 ### CC.NativeInterpreter
-precompile(Tuple{typeof(CC._infer_effects), CC.NativeInterpreter, Any, Bool})
 precompile(Tuple{typeof(CC.typeinf_code), CC.NativeInterpreter, Core.MethodMatch, Bool})
+precompile(Tuple{typeof(CC.typeinf_local), CC.NativeInterpreter, CC.InferenceState, CC.CurrentState})
 precompile(Tuple{typeof(CC.typeinf_type), CC.NativeInterpreter, Core.MethodMatch})
+precompile(Tuple{typeof(CC._infer_effects), CC.NativeInterpreter, Any, Bool})
 
 # module CompilerExt
