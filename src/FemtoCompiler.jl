@@ -7,7 +7,6 @@ include("types.jl")
 include("irutils.jl")
 
 if VERSION >= v"1.12"
-include("CompilerPlugins.jl")
 include("bootstrap.jl")
 include("OverlayPlus.jl")
 include("precompile.jl")
