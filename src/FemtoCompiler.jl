@@ -9,7 +9,7 @@ include("irutils.jl")
 if VERSION >= v"1.12"
 include("bootstrap.jl")
 include("OverlayPlus.jl")
-include("precompile.jl")
+Base.generating_output() && include("precompile.jl")
 end # if
 
 end # module FemtoCompiler

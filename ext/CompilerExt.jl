@@ -7,7 +7,7 @@ include("newinterp.jl")
 if VERSION >= v"1.12"
     include("abstractinterpretation.jl")
     include("typeinfer.jl")
-    include("precompile.jl")
+    Base.generating_output() && include("precompile.jl")
 end
 
 end # module CompilerExt
