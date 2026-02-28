@@ -6,13 +6,13 @@ using FemtoCompiler: FemtoCompiler, FemtoInterpreter
 using Core: Compiler as CC
 using .CC: MethodInstance, InferenceResult, typeinf_lattice, Const, InferenceState, CodeInfo, CurrentState
 
+interp = FemtoInterpreter()
+
 f = +
 types = (Int, Int)
 
-m = methods(f, types)
-mi::MethodInstance = m[1].specializations[1]
-interp = FemtoInterpreter()
 𝕃ᵢ = typeinf_lattice(interp)
+mi::MethodInstance = Base.method_instance(f, types)
 result = InferenceResult(mi, 𝕃ᵢ)
 @test result.argtypes == [Const(+), Int, Int]
 frame = InferenceState(result, #=cache_mode=#:no, interp)

@@ -26,12 +26,10 @@ end
 f = +
 types = (Int, Int)
 
-m = methods(f, types)
-mi::MethodInstance = m[1].specializations[1]
-
 𝕃ᵢ = CC.typeinf_lattice(interp)
 @test 𝕃ᵢ isa CC.InferenceLattice
 
+mi::MethodInstance = Base.method_instance(f, types)
 @test CC.typeinf_type(interp, mi) === Int
 
 frame = CC.typeinf_frame(interp, mi, #=run_optimizer=#false)
