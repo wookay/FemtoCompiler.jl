@@ -13,7 +13,7 @@ using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
            conditional_change, condition_object_change, update_bestguess!,
            MethodMatch, MethodInstance, InferenceResult, typeinf, result_is_constabi, codeinfo_for_const
 if VERSION >= v"1.14-DEV"
-using .CC: conditional_valid, strefine1!
+using .CC: conditional_valid, strefine1!, init_slot_aliases!, update_alias_table!, propagate_aliased_condition!
 end
 
 import .CC: typeinf_local
@@ -36,6 +36,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
         bbend = nextresult.bbend
         currstate = nextresult.currstate
         currsaw_latestworld = nextresult.currsaw_latestworld
+        slot_aliases = nextresult.slot_aliases
         stmt = frame.src.code[currpc]
         result = abstract_eval_basic_statement(interp, stmt, StatementState(currstate, currsaw_latestworld), frame, nextresult.result)
         @goto injected_result
@@ -46,10 +47,12 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
     end
     currstate = copy(states[currbb]::VarTable)
     currsaw_latestworld = saw_latestworld[currbb]
+    slot_aliases = copy(frame.bb_slot_aliases[1]::Vector{Int})
     while currbb <= nbbs
         delete!(W, currbb)
         bbstart = first(bbs[currbb].stmts)
         bbend = last(bbs[currbb].stmts)
+        init_slot_aliases!(slot_aliases, frame, currbb)
 
         currpc = bbstart - 1
         while currpc < bbend
@@ -89,7 +92,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
                         add_curr_ssaflag!(frame, IR_FLAG_NOTHROW)
                     else
                         update_exc_bestguess!(interp, TypeError, frame)
-                        propagate_to_error_handler!(currstate, currsaw_latestworld, frame, 𝕃ᵢ)
+                        propagate_to_error_handler!(𝕃ᵢ, currstate, slot_aliases, currsaw_latestworld, frame)
                         merge_effects!(interp, frame, EFFECTS_THROWS)
                     end
 
@@ -131,6 +134,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
                             if else_change !== nothing
                                 elsestate = copy(currstate)
                                 strefine1!(elsestate, else_change)
+                                propagate_aliased_condition!(𝕃ᵢ, elsestate, condt, :else, slot_aliases)
                             elseif condslot isa SlotNumber
                                 elsestate = copy(currstate)
                             else
@@ -139,17 +143,18 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
                             if condslot isa SlotNumber # refine the type of this conditional object itself for this else branch
                                 strefine1!(elsestate, condition_object_change(currstate, condt, condslot, :else))
                             end
-                            else_changed = update_bbstate!(𝕃ᵢ, frame, falsebb, elsestate, currsaw_latestworld)
+                            else_changed = update_bbstate!(𝕃ᵢ, elsestate, slot_aliases, falsebb, currsaw_latestworld, frame)
                             then_change = conditional_change(𝕃ᵢ, currstate, condt, :then)
                             thenstate = currstate
                             if then_change !== nothing
                                 strefine1!(thenstate, then_change)
+                                propagate_aliased_condition!(𝕃ᵢ, thenstate, condt, :then, slot_aliases)
                             end
                             if condslot isa SlotNumber # refine the type of this conditional object itself for this then branch
                                 strefine1!(thenstate, condition_object_change(currstate, condt, condslot, :then))
                             end
                         else
-                            else_changed = update_bbstate!(𝕃ᵢ, frame, falsebb, currstate, currsaw_latestworld)
+                            else_changed = update_bbstate!(𝕃ᵢ, currstate, slot_aliases, falsebb, currsaw_latestworld, frame)
                         end
                         if else_changed
                             handle_control_backedge!(interp, frame, currpc, stmt.dest)
@@ -195,7 +200,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
             sstate = StatementState(currstate, currsaw_latestworld)
             result = abstract_eval_basic_statement(interp, stmt, sstate, frame)
             if result isa Future{RTEffects}
-                return CurrentState(result, currstate, currsaw_latestworld, bbstart, bbend)
+                return CurrentState(result, currstate, slot_aliases, currsaw_latestworld, bbstart, bbend)
             else
                 @label injected_result
                 (; rt, exct, effects, changes, refinements, currsaw_latestworld) = result
@@ -207,7 +212,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
                     # TODO: assert that these conditions match. For now, we assume the `nothrow` flag
                     # to be correct, but allow the exct to be an over-approximation.
                 end
-                propagate_to_error_handler!(currstate, currsaw_latestworld, frame, 𝕃ᵢ)
+                propagate_to_error_handler!(𝕃ᵢ, currstate, slot_aliases, currsaw_latestworld, frame)
             end
             if rt === Bottom
                 ssavaluetypes[currpc] = Bottom
@@ -219,14 +224,15 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
             end
             if changes !== nothing
                 stoverwrite1!(currstate, changes)
+                update_alias_table!(slot_aliases, stmt, frame.src.code)
             end
             if refinements isa SlotRefinement
-                apply_refinement!(𝕃ᵢ, refinements.slot, refinements.typ, currstate, changes)
+                apply_refinement!(𝕃ᵢ, refinements.slot, refinements.typ, currstate, changes, slot_aliases)
             elseif refinements isa Vector{Any}
                 for i = 1:length(refinements)
                     newtyp = refinements[i]
                     newtyp === nothing && continue
-                    apply_refinement!(𝕃ᵢ, SlotNumber(i), newtyp, currstate, changes)
+                    apply_refinement!(𝕃ᵢ, SlotNumber(i), newtyp, currstate, changes, slot_aliases)
                 end
             end
             if rt === nothing
@@ -243,7 +249,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
 
         # Case 2: Directly branch to a different BB
         begin @label branch
-            if update_bbstate!(𝕃ᵢ, frame, nextbb, currstate, currsaw_latestworld)
+            if update_bbstate!(𝕃ᵢ, currstate, slot_aliases, nextbb, currsaw_latestworld, frame)
                 push!(W, nextbb)
             end
         end
