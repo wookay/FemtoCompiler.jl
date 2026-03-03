@@ -1,5 +1,6 @@
 using Jive
-@If VERSION >= v"1.14.0-DEV.1826" module test_femtocompiler_reflection
+# julia commit 6c7ebe0e41
+@If VERSION >= v"1.14.0-DEV.1833" module test_femtocompiler_reflection
 
 using Test
 using FemtoCompiler: FemtoCompiler, FemtoInterpreter

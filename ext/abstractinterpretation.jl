@@ -13,7 +13,8 @@ using .CC: AbstractInterpreter, InferenceState, CurrentState, StatementState,
            conditional_change, condition_object_change, update_bestguess!,
            MethodMatch, MethodInstance, InferenceResult, typeinf, result_is_constabi, codeinfo_for_const
 if VERSION >= v"1.14-DEV"
-using .CC: conditional_valid, strefine1!, init_slot_aliases!, update_alias_table!, propagate_aliased_condition!
+using .CC: conditional_valid, strefine1!, init_slot_aliases!, update_alias_table!, propagate_aliased_condition!,
+           BBEntryState
 end
 
 import .CC: typeinf_local
@@ -25,7 +26,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
     bbs = frame.cfg.blocks
     nbbs = length(bbs)
     𝕃ᵢ = typeinf_lattice(interp)
-    states = frame.bb_vartables
+    states = frame.bb_states
     saw_latestworld = frame.bb_saw_latestworld
     currbb = frame.currbb
     currpc = frame.currpc
@@ -45,9 +46,9 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
     if currbb != 1
         currbb = frame.currbb = _bits_findnext(W.bits, 1)::Int # next basic block
     end
-    currstate = copy(states[currbb]::VarTable)
+    currstate = copy((states[currbb]::BBEntryState).vartable)
     currsaw_latestworld = saw_latestworld[currbb]
-    slot_aliases = copy(frame.bb_slot_aliases[1]::Vector{Int})
+    slot_aliases = copy((states[1]::BBEntryState).aliases)
     while currbb <= nbbs
         delete!(W, currbb)
         bbstart = first(bbs[currbb].stmts)
@@ -260,11 +261,11 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
             currbb == -1 && break # the working set is empty
             currbb > nbbs && break
 
-            nexttable = states[currbb]
-            if nexttable === nothing
+            nextstate = states[currbb]
+            if nextstate === nothing
                 init_vartable!(currstate, frame)
             else
-                stoverwrite!(currstate, nexttable)
+                stoverwrite!(currstate, nextstate.vartable)
             end
         end
     end # while currbb <= nbbs
