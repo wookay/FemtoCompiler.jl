@@ -1,19 +1,39 @@
 # https://github.com/wookay/SugarCubes.jl
 #
 # ~/.julia/dev/SugarCubes main✔   ln -s  JULIA_SOURCE_PATH  sources
+#
+# see also https://github.com/wookay/SugarCubes.jl/blob/main/test/sugarcubes/femtocompier_typeinf_edge.jl
 
 using Test
 using Pkg # Pkg.devdir
 using SugarCubes: code_block_with, has_diff
 
-src_path = normpath(Pkg.devdir(), "SugarCubes/sources/Compiler/src/abstractinterpretation.jl")
-@test isfile(src_path)
-src_signature = :(function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState) end)
-src_block = code_block_with(; filepath = src_path, signature = src_signature)
+function checks_has_diff(src_path::String,
+                         src_signature::Expr,
+                         dest_path::String,
+                         dest_signature::Expr)
+    printstyled(stdout, "checks_has_diff", color = :cyan)
+    print(stdout, " ", basename(src_path))
+    src_filepath = normpath(Pkg.devdir(), src_path)
+    dest_filepath = normpath(Pkg.devdir(), dest_path)
+    @test isfile(src_filepath)
+    @test isfile(dest_filepath)
+    src_block = code_block_with(; filepath = src_filepath, signature = src_signature)
+    dest_block = code_block_with(; filepath = dest_filepath, signature = dest_signature)
+    @test has_diff(src_block, dest_block) === false
+    println(stdout)
+end
 
-dest_path = normpath(Pkg.devdir(), "FemtoCompiler/ext/abstractinterpretation.jl")
-@test isfile(dest_path)
-dest_signature = :(function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState) end)
-dest_block = code_block_with(; filepath = dest_path, signature = dest_signature)
+checks_has_diff(
+    "SugarCubes/sources/Compiler/src/abstractinterpretation.jl",
+    :(function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState) end),
+    "FemtoCompiler/ext/abstractinterpretation.jl",
+    :(function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState) end)
+)
 
-@test has_diff(src_block, dest_block) === false
+checks_has_diff(
+    "SugarCubes/sources/Compiler/src/typeinfer.jl",
+    :(function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end),
+    "FemtoCompiler/ext/typeinfer.jl",
+    :(function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end)
+)
