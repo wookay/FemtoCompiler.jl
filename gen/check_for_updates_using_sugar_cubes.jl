@@ -13,7 +13,8 @@ function checks_has_diff(src_path::String,
                          dest_path::String,
                          dest_signature::Expr)
     printstyled(stdout, "checks_has_diff", color = :cyan)
-    print(stdout, " ", basename(src_path))
+    print(stdout, " ", basename(src_path), " ")
+    printstyled(stdout, src_signature.args[1].args[1], color = :blue)
     src_filepath = normpath(Pkg.devdir(), src_path)
     dest_filepath = normpath(Pkg.devdir(), dest_path)
     @test isfile(src_filepath)
@@ -36,4 +37,11 @@ checks_has_diff(
     :(function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end),
     "FemtoCompiler/ext/typeinfer.jl",
     :(function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end)
+)
+
+checks_has_diff(
+    "SugarCubes/sources/Compiler/src/typeinfer.jl",
+    :(function typeinf_frame(interp::AbstractInterpreter, mi::MethodInstance, run_optimizer::Bool) end),
+    "FemtoCompiler/ext/typeinfer.jl",
+    :(if VERSION >= v"1.13.0-DEV.483" function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool) end end)
 )
