@@ -40,7 +40,7 @@ jobs:
       run: |
         git clone --depth=1 --filter=blob:none --sparse https://github.com/JuliaLang/julia sources
         cd sources/
-        git sparse-checkout set JuliaSyntax
+        git sparse-checkout set JuliaSyntax Compiler
         cd ../
 
         git clone --depth=1 https://github.com/wookay/SugarCubes.jl SugarCubes.jl
