@@ -35,8 +35,20 @@ jobs:
     - uses: julia-actions/julia-buildpkg@v1
     - uses: julia-actions/julia-runtest@v1
 
+  CheckForUpdatesUsingSugarCubes:
+    needs: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: [1.12.5]
+        julia-arch: [x64]
+        os: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: julia-actions/setup-julia@v1
+    - uses: julia-actions/cache@v1
+    - uses: julia-actions/julia-buildpkg@v1
     - name: gen/check_for_updates_using_sugar_cubes.jl
-      if: ${{ matrix.julia-version == '1.12.5' }}
       run: |
         git clone --depth=1 --filter=blob:none --sparse https://github.com/JuliaLang/julia sources
         cd sources/
@@ -50,11 +62,23 @@ jobs:
         julia -e 'using Pkg; Pkg.develop(path="SugarCubes.jl")'
 
         cd gen/
-        julia check_for_updates_using_sugar_cubes.jl
+        julia --color=yes check_for_updates_using_sugar_cubes.jl
         cd ../
 
+  TraceCompileTiming:
+    needs: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: [nightly]
+        julia-arch: [x64]
+        os: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v4
+    - uses: julia-actions/setup-julia@v1
+    - uses: julia-actions/cache@v1
+    - uses: julia-actions/julia-buildpkg@v1
     - name: trace-compile-timing
-      if: ${{ matrix.julia-version == '1.12.5' || matrix.julia-version == 'nightly' }}
       run: |
            julia -e 'using Pkg; Pkg.develop(path=".")'
            julia -e 'using Pkg; Pkg.add("Jive")'
