@@ -13,12 +13,13 @@ function checks_has_diff(src_path::String,
                          dest_signature::Expr)
     printstyled(stdout, "checks_has_diff", color = :cyan)
     print(stdout, " ", basename(src_path), " ")
-    printstyled(stdout, src_signature.args[1].args[1], color = :blue)
     src_filepath = normpath(@__DIR__, "..", src_path)
     dest_filepath = normpath(@__DIR__, "..", dest_path)
     @test isfile(src_filepath)
     @test isfile(dest_filepath)
     src_block = code_block_with(; filepath = src_filepath, signature = src_signature)
+    (depth, kind, sig) = src_block.signature.layers[end]
+    printstyled(stdout, sig.args[1], color = :blue)
     dest_block = code_block_with(; filepath = dest_filepath, signature = dest_signature)
     @test has_diff(src_block, dest_block) === false
     println(stdout)
