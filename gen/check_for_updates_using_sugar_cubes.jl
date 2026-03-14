@@ -5,7 +5,6 @@
 using Test
 using SugarCubes: code_block_with, has_diff
 # https://github.com/wookay/SugarCubes.jl
-# see also https://github.com/wookay/SugarCubes.jl/blob/main/test/femtocompiler/typeinf_edge.jl
 
 function checks_has_diff(src_path::String,
                          src_signature::Expr,
