@@ -9,7 +9,8 @@ using SugarCubes: code_block_with, has_diff
 function check_the_code_block_diff(src_path::String,
                                    src_signature::Expr,
                                    dest_path::String,
-                                   dest_signature::Expr)
+                                   dest_signature::Expr ;
+                                   skip_lines = (src = Int[], dest = Int[]))
     printstyled(stdout, "check_the_code_block_diff", color = :blue)
     print(stdout, " ", basename(src_path), " ")
     src_filepath = normpath(@__DIR__, "..", src_path)
@@ -20,7 +21,7 @@ function check_the_code_block_diff(src_path::String,
     (depth, kind, sig) = src_block.signature.layers[end]
     printstyled(stdout, sig.args[1], color = :cyan)
     dest_block = code_block_with(; filepath = dest_filepath, signature = dest_signature)
-    @test has_diff(src_block, dest_block) === false
+    @test has_diff(src_block, dest_block; skip_lines) === false
     println(stdout)
 end
 
@@ -43,4 +44,12 @@ check_the_code_block_diff(
     :(function typeinf_frame(interp::AbstractInterpreter, mi::MethodInstance, run_optimizer::Bool) end),
     "ext/typeinfer.jl",
     :(if VERSION >= v"1.13.0-DEV.483" function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool) end end)
+)
+
+check_the_code_block_diff(
+    "sources/Compiler/src/bootstrap.jl",
+    :(function bootstrap!() end),
+    "src/bootstrap.jl",
+    :(function bootstrap(io::IO) end) ;
+    skip_lines = (src = [1, 3, -5, collect(-3:-2)...], dest = [2, -3])
 )

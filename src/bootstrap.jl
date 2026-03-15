@@ -12,11 +12,11 @@ function bootstrap(io::IO)
     let time() = ccall(:jl_clock_now, Float64, ())
         println(io, "Compiling the femto compiler. This may take several minutes ...")
 
-        ssa_inlining_pass!_tt = Tuple{typeof(ssa_inlining_pass!), IRCode, InliningState{FemtoInterpreter}, Bool}
-        optimize_tt = Tuple{typeof(optimize), FemtoInterpreter, OptimizationState{FemtoInterpreter}, InferenceResult}
-        typeinf_ext_tt = Tuple{typeof(typeinf_ext), FemtoInterpreter, MethodInstance, UInt8}
-        typeinf_tt = Tuple{typeof(typeinf), FemtoInterpreter, InferenceState}
-        typeinf_edge_tt = Tuple{typeof(typeinf_edge), FemtoInterpreter, Method, Any, SimpleVector, InferenceState, Bool, Bool}
+        ssa_inlining_pass!_tt = Tuple{typeof(ssa_inlining_pass!), IRCode, InliningState{NativeInterpreter}, Bool}
+        optimize_tt = Tuple{typeof(optimize), NativeInterpreter, OptimizationState{NativeInterpreter}, InferenceResult}
+        typeinf_ext_tt = Tuple{typeof(typeinf_ext), NativeInterpreter, MethodInstance, UInt8}
+        typeinf_tt = Tuple{typeof(typeinf), NativeInterpreter, InferenceState}
+        typeinf_edge_tt = Tuple{typeof(typeinf_edge), NativeInterpreter, Method, Any, SimpleVector, InferenceState, Bool, Bool}
         fs = Any[
             # we first create caches for the optimizer, because they contain many loop constructions
             # and they're better to not run in interpreter even during bootstrapping
@@ -57,14 +57,14 @@ function bootstrap(io::IO)
                     end
                     mi = specialize_method(m.method, Tuple{params...}, m.sparams)
                     #isa_compileable_sig(mi) || println(stderr, "WARNING: inferring `", mi, "` which isn't expected to be called.")
-                    ci = typeinf_ext_toplevel(mi, world, isa_compileable_sig(mi) ? SOURCE_MODE_ABI : SOURCE_MODE_NOT_REQUIRED, TRIM_NO)
-                    # println(io, ci)
+                    typeinf_ext_toplevel(mi, world, isa_compileable_sig(mi) ? SOURCE_MODE_ABI : SOURCE_MODE_NOT_REQUIRED, TRIM_NO)
                 end
             end
         end
         endtime = time()
         println(io, "FemtoCompiler ──── ", sub_float(endtime,starttime), " seconds")
     end
+    nothing
 end
 
 # module FemtoCompiler
