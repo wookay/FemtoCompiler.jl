@@ -51,5 +51,5 @@ check_the_code_block_diff(
     :(function bootstrap!() end),
     "src/bootstrap.jl",
     :(function bootstrap(io::IO) end) ;
-    skip_lines = (src = [1, 3, -5, collect(-3:-2)...], dest = [2, -3])
+    skip_lines = (src = vcat(1, 3, -5, -3:-2), dest = [2, -3])
 )
