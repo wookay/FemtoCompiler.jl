@@ -30,7 +30,7 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
             inferred = nothing
         end
         if codeinst isa CodeInstance
-            need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred))
+            need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred) || use_const_api(codeinst))
             if need_inlineable_code
                 src = ci_get_source(interp, codeinst, inferred)
                 if src === nothing
@@ -77,7 +77,7 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
             if codeinst isa CodeInstance # return existing rettype if the code is already inferred
                 engine_reject(interp, ci_from_engine)
                 ci_from_engine = nothing
-                need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred))
+                need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred) || use_const_api(codeinst))
                 if need_inlineable_code
                     src = ci_get_source(interp, codeinst, inferred)
                     if src === nothing
