@@ -9,7 +9,7 @@ using .CC: SimpleVector, AbsIntState,
            assign_parentchild!, update_valid_age!, adjust_effects, effects_for_cycle,
            refine_exception_type, add_cycle_backedge!
 if VERSION >= v"1.14.0-DEV.60"
-using .CC: ci_get_source, _schedule_edge_infer_task!
+using .CC: ci_get_source, _schedule_edge_infer_task!, use_const_api
 end
 
 # from julia/Compiler/src/typeinfer.jl
