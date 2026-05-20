@@ -30,7 +30,14 @@ tt = Base.signature_type(f, types)
  0 └──      return %1
 =#
 
+f = +
+types = (Int, Int)
 maxcost = FemtoCompiler.code_statement_costs(f, types; interp)
 @test maxcost == 1
+
+f = ^
+types = (String, Int)
+maxcost = FemtoCompiler.code_statement_costs(f, types; interp)
+@test maxcost == (VERSION >= v"1.14-DEV" ? 20 : 1)
 
 end # module test_femtocompiler_reflection
