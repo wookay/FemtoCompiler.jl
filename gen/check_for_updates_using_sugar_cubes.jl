@@ -53,3 +53,11 @@ check_the_code_block_diff(
     :(function bootstrap(io::IO) end) ;
     skip_lines = (src = vcat(1, 3, -5, -3:-2), dest = [2, -3])
 )
+
+check_the_code_block_diff(
+    "sources/base/reflection.jl",
+    :(function print_statement_costs(io::IO, @nospecialize(tt::Type); world::UInt=get_world_counter(), interp=nothing) end),
+    "src/irutils.jl",
+    :(function code_statement_costs(f::Function, types::Tuple; interp::Union{Nothing, AbstractInterpreter} = nothing)::Union{Nothing, Int} end) ;
+    skip_lines = (src = vcat(6, 10, 13, 18:23, 25), dest = vcat(1:2, 8, 12, 15, 20:26, 28, -1))
+)
