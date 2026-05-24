@@ -2,8 +2,8 @@
 
 using .CC: CodeInfo
 
-function code_typed1(f::Function, types::Tuple; interp::Union{Nothing,AbstractInterpreter} = nothing)::CodeInfo
-    first(only(Base.code_typed(f, types; interp)))
+function code_typed1(f::Function, types::Tuple; interp::Union{Nothing,AbstractInterpreter} = nothing, kw...)::CodeInfo
+    first(only(Base.code_typed(f, types; interp, kw...)))
 end
 
 # from julia/base/reflection.jl

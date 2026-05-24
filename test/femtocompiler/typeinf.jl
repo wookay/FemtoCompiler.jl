@@ -9,16 +9,18 @@ using FemtoCompiler: FemtoCompiler, FemtoInterpreter, OverlayPlus, code_typed1
 
 f = OverlayPlus.overlay_plus
 
+@test QuoteNode(:default) === :(:default)
+
 let src = code_typed1(f, (Int, Int))
-    line = src.code[end]
-    @test line == ReturnNode(:(:default))
+    node = src.code[end]
+    @test node == ReturnNode(QuoteNode(:default))
 end
 
 interp = FemtoInterpreter()
 let src = code_typed1(f, (Int, Int); interp)
-    line = src.code[end]
+    node = src.code[end]
     if VERSION >= v"1.12"
-        @test line == ReturnNode(:(:overlay))
+        @test node == ReturnNode(QuoteNode(:overlay))
     end
 end
 
@@ -32,19 +34,19 @@ types = (Int, Int)
 mi::MethodInstance = Base.method_instance(f, types)
 @test CC.typeinf_type(interp, mi) === Int
 
-frame = CC.typeinf_frame(interp, mi, #=run_optimizer=#false)
+frame = CC.typeinf_frame(interp, mi, #=run_optimizer=# false)
 @test frame isa CC.InferenceState
 
 result = CC.InferenceResult(mi, 𝕃ᵢ)
 @test result.argtypes == [CC.Const(+), Int, Int]
 
-frame = CC.InferenceState(result, #=cache_mode=#:no, interp)
+frame = CC.InferenceState(result, #=cache_mode=# :no, interp)
 @test CC.is_inferred(frame) === false
 @test CC.typeinf(interp, frame)::Bool
 @test CC.is_inferred(frame) === true
 
 result = CC.InferenceResult(mi, 𝕃ᵢ)
-frame = CC.InferenceState(result, #=cache_mode=#:no, interp)
+frame = CC.InferenceState(result, #=cache_mode=# :no, interp)
 nextresult1 = CC.CurrentState()
 @test CC.is_inferred(frame) === false
 nextresult2 = CC.typeinf_local(interp, frame, nextresult1)
