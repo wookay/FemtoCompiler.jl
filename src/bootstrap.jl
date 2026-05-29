@@ -9,14 +9,15 @@ using .CC: typeinf, typeinf_edge
 # from julia/Compiler/src/bootstrap.jl
 # function bootstrap!()
 function bootstrap(io::IO)
+    # global bootstrapping_compiler = true #
     let time() = ccall(:jl_clock_now, Float64, ())
-        println(io, "Compiling the femto compiler. This may take several minutes ...")
+        println(io, "Compiling the femto compiler. This may take several minutes ...") #
 
         ssa_inlining_pass!_tt = Tuple{typeof(ssa_inlining_pass!), IRCode, InliningState{NativeInterpreter}, Bool}
         optimize_tt = Tuple{typeof(optimize), NativeInterpreter, OptimizationState{NativeInterpreter}, InferenceResult}
         typeinf_ext_tt = Tuple{typeof(typeinf_ext), NativeInterpreter, MethodInstance, UInt8}
-        typeinf_tt = Tuple{typeof(typeinf), NativeInterpreter, InferenceState}
-        typeinf_edge_tt = Tuple{typeof(typeinf_edge), NativeInterpreter, Method, Any, SimpleVector, InferenceState, Bool, Bool}
+        typeinf_tt = Tuple{typeof(typeinf), NativeInterpreter, InferenceState{NativeInterpreter}}
+        typeinf_edge_tt = Tuple{typeof(typeinf_edge), NativeInterpreter, Method, Any, SimpleVector, InferenceState{NativeInterpreter}, Bool, Bool}
         fs = Any[
             # we first create caches for the optimizer, because they contain many loop constructions
             # and they're better to not run in interpreter even during bootstrapping
@@ -62,8 +63,10 @@ function bootstrap(io::IO)
             end
         end
         endtime = time()
-        println(io, "FemtoCompiler ──── ", sub_float(endtime,starttime), " seconds")
+        println(io, "Base.Compiler ──── ", sub_float(endtime,starttime), " seconds") #
     end
+    # activate_codegen!() #
+    # global bootstrapping_compiler = false #
     nothing
 end
 
