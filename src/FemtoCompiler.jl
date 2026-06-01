@@ -4,9 +4,9 @@ using JuliaCore # CompilerExt
 
 using Core.Compiler: Compiler as CC
 include("types.jl")
-include("irutils.jl")
 
 if VERSION >= v"1.12"
+include("irutils.jl")
 include("bootstrap.jl")
 include("OverlayPlus.jl")
 Base.generating_output() && include("precompile.jl")

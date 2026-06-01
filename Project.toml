@@ -12,6 +12,9 @@ JuliaCore = {path = "JuliaCore"}
 [extensions]
 CompilerExt = "JuliaCore"
 
+[syntax]
+julia_version = "1.14"
+
 [compat]
 julia = "1.11"
 JuliaCore = "0.1"
