@@ -26,38 +26,38 @@ function check_the_code_block_diff(src_path::String,
 end
 
 check_the_code_block_diff(
-    "sources/Compiler/src/abstractinterpretation.jl",
-    :(function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState) end),
     "ext/abstractinterpretation.jl",
-    :(function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState) end)
+    :(function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresult::CurrentState) end),
+    "sources/Compiler/src/abstractinterpretation.jl",
+    :(function typeinf_local(interp::AbstractInterpreter, frame::InferenceState, nextresult::CurrentState) end)
 )
 
 check_the_code_block_diff(
-    "sources/Compiler/src/typeinfer.jl",
-    :(function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end),
     "ext/typeinfer.jl",
-    :(function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end)
-)
-
-check_the_code_block_diff(
+    :(function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end),
     "sources/Compiler/src/typeinfer.jl",
-    :(function typeinf_frame(interp::AbstractInterpreter, mi::MethodInstance, run_optimizer::Bool) end),
-    "ext/typeinfer.jl",
-    :(if VERSION >= v"1.13.0-DEV.483" function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool) end end)
+    :(function typeinf_edge(interp::AbstractInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool) end)
 )
 
 check_the_code_block_diff(
-    "sources/Compiler/src/bootstrap.jl",
-    :(function bootstrap!() end),
+    "ext/typeinfer.jl",
+    :(if VERSION >= v"1.13.0-DEV.483" function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimizer::Bool) end end),
+    "sources/Compiler/src/typeinfer.jl",
+    :(function typeinf_frame(interp::AbstractInterpreter, mi::MethodInstance, run_optimizer::Bool) end)
+)
+
+check_the_code_block_diff(
     "src/bootstrap.jl",
-    :(function bootstrap(io::IO) end) ;
+    :(function bootstrap(io::IO) end),
+    "sources/Compiler/src/bootstrap.jl",
+    :(function bootstrap!() end) ;
     skip_lines = (src = vcat(1, 3, -5, -3:-2), dest = vcat(1, 3, -5, -3:-2))
 )
 
 check_the_code_block_diff(
-    "sources/base/reflection.jl",
-    :(function print_statement_costs(io::IO, @nospecialize(tt::Type); world::UInt=get_world_counter(), interp=nothing) end),
     "src/irutils.jl",
-    :(function code_statement_costs(f::Function, types::Tuple; interp::Union{Nothing, AbstractInterpreter} = nothing)::Union{Nothing, Int} end) ;
-    skip_lines = (src = vcat(6, 10, 13, 18:23, 25), dest = vcat(1:2, 8, 12, 15, 20:26, 28, -1))
+    :(function code_statement_costs(f::Function, types::Tuple; interp::Union{Nothing, AbstractInterpreter} = nothing)::Union{Nothing, Int} end),
+    "sources/base/reflection.jl",
+    :(function print_statement_costs(io::IO, @nospecialize(tt::Type); world::UInt=get_world_counter(), interp=nothing) end) ;
+    skip_lines = (src = vcat(1:2, 8, 12, 15, 20:26, 28, -1), dest = vcat(6, 10, 13, 18:23, 25))
 )

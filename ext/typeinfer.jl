@@ -126,7 +126,8 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
     bestguess = frame.bestguess
     exc_bestguess = refine_exception_type(frame.exc_bestguess, effects)
     add_cycle_backedge!(caller, frame)
-    return Future(MethodCallResult(interp, caller, method, bestguess, exc_bestguess, effects, nothing, edgecycle, edgelimited))
+    result = frame.result
+    return Future(MethodCallResult(interp, caller, method, bestguess, exc_bestguess, effects, isdefined(result, :ci) ? result.ci : nothing, edgecycle, edgelimited))
 end
 
 # from julia/Compiler/src/typeinfer.jl
