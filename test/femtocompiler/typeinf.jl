@@ -24,6 +24,28 @@ let src = code_typed1(f, (Int, Int); interp)
     end
 end
 
+# from julia/test/precompile.jl
+ms = Base._methods_by_ftype(Tuple{typeof(f), Int, Int}, OverlayPlus.OVERLAY_PLUS_MT, 1, Base.get_world_counter())
+match = only(ms)
+@test match isa Core.MethodMatch
+inst = Base.specialize_method(match)
+@test inst isa MethodInstance
+@test inst.dispatch_status == 0x00
+method = match.method
+@test method isa Method
+@test method.dispatch_status == 0x03
+@test method.sig == Tuple{typeof(f), Int, Int}
+@test only(Base.specializations(method)) === inst
+
+list = methods(f, (Int, Int))
+@test list isa Base.MethodList
+method2 = only(list)
+@test method2 isa Method
+@test method2.dispatch_status == 0x03
+@test method2.sig == Tuple{typeof(f), Any, Any}
+inst2 = only(Base.specializations(method2))
+@test inst2.dispatch_status == 0x00
+
 
 f = +
 types = (Int, Int)
