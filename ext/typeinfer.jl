@@ -11,6 +11,9 @@ using .CC: SimpleVector, AbsIntState,
 if VERSION >= v"1.14.0-DEV.60"
 using .CC: ci_get_source, _schedule_edge_infer_task!, use_const_api
 end
+if VERSION >= v"1.14.0-DEV.2874"
+using .CC: materialize_inference_edges, lookup_cached_edge
+end
 
 # from julia/Compiler/src/typeinfer.jl
 import .CC: typeinf_edge
@@ -19,33 +22,15 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
     cache_mode = CACHE_MODE_GLOBAL # cache edge targets globally by default
     force_inline = is_stmt_inline(get_curr_ssaflag(caller))
     edge_ci = nothing
-    let code = get(code_cache(interp), mi, nothing)
-        codeinst = code
-        if code isa InferenceResult
-            inferred = code.src
-            codeinst = code.ci
-        elseif code isa CodeInstance # return existing rettype if the code is already inferred
-            inferred = @atomic :monotonic code.inferred
-        else
-            inferred = nothing
-        end
-        if codeinst isa CodeInstance
-            need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred) || use_const_api(codeinst))
-            if need_inlineable_code
-                src = ci_get_source(interp, codeinst, inferred)
-                if src === nothing
-                    # Re-infer to get the appropriate source representation
-                    cache_mode = CACHE_MODE_LOCAL
-                    edge_ci = codeinst
-                else # no reinference needed
-                    @assert codeinst.def === mi "MethodInstance for cached edge does not match"
-                    return return_cached_result(interp, method, code, src, caller, edgecycle, edgelimited)
-                end
-            else # no reinference needed
-                @assert codeinst.def === mi "MethodInstance for cached edge does not match"
-                return return_cached_result(interp, method, code, nothing, caller, edgecycle, edgelimited)
-            end
-        end
+    cached, missing_source_edge = lookup_cached_edge(interp, method, mi, caller,
+        force_inline, edgecycle, edgelimited)
+    if cached !== nothing
+        return cached
+    elseif missing_source_edge !== nothing
+        # A globally published executable target exists, but its source was discarded.
+        # Re-infer only the source/facts and certify that local work with a local proof.
+        cache_mode = CACHE_MODE_LOCAL
+        edge_ci = missing_source_edge
     end
     if !InferenceParams(interp).force_enable_inference && ccall(:jl_get_module_infer, Cint, (Any,), method.module) == 0
         add_remark!(interp, caller, "[typeinf_edge] Inference is disabled for the target module")
@@ -64,43 +49,27 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
             reserve_start = _time_ns() # subtract engine_reserve (thread-synchronization) time from callers to avoid double-counting
             ci_from_engine = engine_reserve(interp, mi)
             caller.time_paused += (_time_ns() - reserve_start)
-            code = get(code_cache(interp), mi, nothing)
-            codeinst = code
-            if code isa InferenceResult
-                inferred = code.src
-                codeinst = code.ci
-            elseif code isa CodeInstance # return existing rettype if the code is already inferred
-                inferred = @atomic :monotonic code.inferred
-            else
-                inferred = nothing
-            end
-            if codeinst isa CodeInstance # return existing rettype if the code is already inferred
+            cached, missing_source_edge = lookup_cached_edge(interp, method, mi, caller,
+                force_inline, edgecycle, edgelimited)
+            if cached !== nothing
+                engine_reject(interp, ci_from_engine)
+                return cached
+            elseif missing_source_edge !== nothing
                 engine_reject(interp, ci_from_engine)
                 ci_from_engine = nothing
-                need_inlineable_code = may_optimize(interp) && (force_inline || is_inlineable(inferred) || use_const_api(codeinst))
-                if need_inlineable_code
-                    src = ci_get_source(interp, codeinst, inferred)
-                    if src === nothing
-                        cache_mode = CACHE_MODE_LOCAL
-                        edge_ci = codeinst
-                    else
-                        @assert codeinst.def === mi "MethodInstance for cached edge does not match"
-                        return return_cached_result(interp, method, code, src, caller, edgecycle, edgelimited)
-                    end
-                else
-                    @assert codeinst.def === mi "MethodInstance for cached edge does not match"
-                    return return_cached_result(interp, method, code, nothing, caller, edgecycle, edgelimited)
-                end
+                cache_mode = CACHE_MODE_LOCAL
+                edge_ci = missing_source_edge
             end
         else
             ci_from_engine = nothing
         end
         result = InferenceResult(mi, typeinf_lattice(interp))
-        result.ci = if ci_from_engine !== nothing
-                ci_from_engine
-            else
-                ccall(:jl_new_codeinst_uninit, Any, (Any, Any), mi, cache_owner(interp))::CodeInstance
-            end
+        if ci_from_engine !== nothing
+            result.ci = ci_from_engine
+        elseif !iszero(cache_mode & CACHE_MODE_GLOBAL)
+            result.ci = ccall(:jl_new_codeinst_uninit, Any, (Any, Any),
+                mi, cache_owner(interp))::CodeInstance
+        end
         frame = InferenceState(result, cache_mode, interp) # always use the cache for edge targets
         if frame === nothing
             add_remark!(interp, caller, "[typeinf_edge] Failed to retrieve source")
@@ -127,7 +96,14 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
     exc_bestguess = refine_exception_type(frame.exc_bestguess, effects)
     add_cycle_backedge!(caller, frame)
     result = frame.result
-    return Future(MethodCallResult(interp, caller, method, bestguess, exc_bestguess, effects, isdefined(result, :ci) ? result.ci : nothing, edgecycle, edgelimited))
+    edge = get(code_cache(interp), result.linfo, nothing)
+    edge isa CodeInstance || (edge = nothing)
+    if edge !== nothing
+        update_valid_age!(caller, get_inference_world(interp), proof_worlds(edge))
+    end
+    return Future(MethodCallResult(interp, caller, method, bestguess, exc_bestguess, effects,
+        edge, edgecycle, edgelimited;
+        force_edgecycle=false, needs_mi_edge=edge === nothing))
 end
 
 # from julia/Compiler/src/typeinfer.jl
@@ -148,11 +124,12 @@ function typeinf_frame(interp::FemtoInterpreter, mi::MethodInstance, run_optimiz
     if run_optimizer
         if result_is_constabi(interp, frame.result)
             rt = frame.result.result::Const
-            src = codeinfo_for_const(interp, frame.linfo, frame.valid_worlds, Core.svec(frame.edges...), rt.val)
+            edges = materialize_inference_edges(frame.edges)
+            src = codeinfo_for_const(interp, frame.linfo, frame.valid_worlds, edges, rt.val)
         else
             opt = OptimizationState(frame, interp)
             optimize(interp, opt, frame.result)
-            src = ir_to_codeinf!(opt, frame, Core.svec(opt.inlining.edges...))
+            src = ir_to_codeinf!(opt, frame, materialize_inference_edges(opt.inlining.edges))
         end
         result.src = frame.src = src
     end

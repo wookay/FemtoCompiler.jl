@@ -12,9 +12,9 @@ native_interp = NativeInterpreter()
 femto_interp = FemtoInterpreter()
 
 @test cache_owner(native_interp) === nothing
-# @info cache_owner(femto_interp) === nothing
+@test cache_owner(femto_interp) === nothing
 
-@test code_cache(native_interp) isa CC.OverlayCodeCache{CC.InternalCodeCache}
-@test code_cache(femto_interp) isa CC.OverlayCodeCache{CC.InternalCodeCache}
+@test code_cache(native_interp) isa CC.InternalCodeCache
+@test code_cache(femto_interp) isa CC.InternalCodeCache
 
 end # module test_femtocompiler_newinterp
