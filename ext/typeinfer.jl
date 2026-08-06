@@ -11,7 +11,7 @@ using .CC: SimpleVector, AbsIntState,
 if VERSION >= v"1.14.0-DEV.60"
 using .CC: ci_get_source, _schedule_edge_infer_task!, use_const_api
 end
-if VERSION >= v"1.14.0-DEV.2874"
+if VERSION >= v"1.14.0-DEV.2874" # julia commit 311f373e01
 using .CC: materialize_inference_edges, lookup_cached_edge
 end
 
