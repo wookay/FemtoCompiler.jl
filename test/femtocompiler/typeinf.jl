@@ -20,7 +20,7 @@ interp = FemtoInterpreter()
 let src = code_typed1(f, (Int, Int); interp)
     node = src.code[end]
     if VERSION >= v"1.12"
-        @test node == ReturnNode(QuoteNode(:overlay))
+        @test node == ReturnNode(QuoteNode(:overlay_value))
     end
 end
 
@@ -73,5 +73,12 @@ nextresult1 = CC.CurrentState()
 @test CC.is_inferred(frame) === false
 nextresult2 = CC.typeinf_local(interp, frame, nextresult1)
 @test nextresult2 isa CC.CurrentState
+
+# from julia/base/docs/Docs.jl
+mt = OverlayPlus.OVERLAY_PLUS_MT
+expr = Expr(:overlay, mt, f)
+@test Base.Docs.astname(expr, false) === f
+binding = Base.Docs.Binding(OverlayPlus, :overlay_with_doc_1)
+@test Base.Docs._doc(binding).text == Core.svec("overlay doc 1\n")
 
 end # module test_femtocompiler_typeinf
