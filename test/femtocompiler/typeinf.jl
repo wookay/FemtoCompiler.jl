@@ -1,15 +1,14 @@
 using Jive
-@If VERSION >= v"1.14.0-DEV.1826" module test_femtocompiler_typeinf
+@If VERSION >= v"1.14.0-DEV.3067" module test_femtocompiler_typeinf_overlay_plus
 
 using Test
-using Core: CodeInfo, ReturnNode
+using Core: ReturnNode
 using Core: Compiler as CC
 using Base: MethodInstance
 using FemtoCompiler: FemtoCompiler, FemtoInterpreter, OverlayPlus, code_typed1
 
 f = OverlayPlus.overlay_plus
-
-@test QuoteNode(:default) === :(:default)
+@test f(1, 2) === :default
 
 let src = code_typed1(f, (Int, Int))
     node = src.code[end]
@@ -17,6 +16,10 @@ let src = code_typed1(f, (Int, Int))
 end
 
 interp = FemtoInterpreter()
+mi::MethodInstance = Base.method_instance(f, (Int, Int))
+ci::Core.CodeInstance = get(CC.code_cache(interp), mi, nothing)
+@test invoke(f, ci, 1, 2) === :default
+
 let src = code_typed1(f, (Int, Int); interp)
     node = src.code[end]
     if VERSION >= v"1.12"
@@ -46,10 +49,29 @@ method2 = only(list)
 inst2 = only(Base.specializations(method2))
 @test inst2.dispatch_status == 0x00
 
+# from julia/base/docs/Docs.jl
+mt = OverlayPlus.OVERLAY_PLUS_MT
+expr = Expr(:overlay, mt, f)
+@test Base.Docs.astname(expr, false) === f
+binding = Base.Docs.Binding(OverlayPlus, :overlay_with_doc_1)
+@test Base.Docs._doc(binding).text == Core.svec("overlay doc 1\n")
+
+@test QuoteNode(:default) === :(:default)
+
+end # module test_femtocompiler_typeinf_overlay_plus
+
+
+@If VERSION >= v"1.14.0-DEV.1826" module test_femtocompiler_typeinf_plus
+
+using Test
+using Core: Compiler as CC
+using Base: MethodInstance
+using FemtoCompiler: FemtoInterpreter
 
 f = +
 types = (Int, Int)
 
+interp = FemtoInterpreter()
 𝕃ᵢ = CC.typeinf_lattice(interp)
 @test 𝕃ᵢ isa CC.InferenceLattice
 
@@ -74,11 +96,4 @@ nextresult1 = CC.CurrentState()
 nextresult2 = CC.typeinf_local(interp, frame, nextresult1)
 @test nextresult2 isa CC.CurrentState
 
-# from julia/base/docs/Docs.jl
-mt = OverlayPlus.OVERLAY_PLUS_MT
-expr = Expr(:overlay, mt, f)
-@test Base.Docs.astname(expr, false) === f
-binding = Base.Docs.Binding(OverlayPlus, :overlay_with_doc_1)
-@test Base.Docs._doc(binding).text == Core.svec("overlay doc 1\n")
-
-end # module test_femtocompiler_typeinf
+end # module test_femtocompiler_typeinf_plus
