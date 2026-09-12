@@ -17,8 +17,12 @@ end
 
 interp = FemtoInterpreter()
 mi::MethodInstance = Base.method_instance(f, (Int, Int))
-ci::Core.CodeInstance = get(CC.code_cache(interp), mi, nothing)
-@test invoke(f, ci, 1, 2) === :default
+icc::CC.InternalCodeCache = CC.code_cache(interp)
+code::Core.CodeInstance = get(icc, mi, nothing)
+effects::CC.Effects = CC.ipo_effects(code)
+@test code.ipo_purity_bits::UInt32 == CC.encode_effects(effects)
+@test effects == CC.decode_effects(code.ipo_purity_bits)
+@test invoke(f, code, 1, 2) === :default
 
 let src = code_typed1(f, (Int, Int); interp)
     node = src.code[end]
