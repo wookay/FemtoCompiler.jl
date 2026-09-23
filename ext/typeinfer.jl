@@ -17,16 +17,22 @@ end
 
 # from julia/Compiler/src/typeinfer.jl
 import .CC: typeinf_edge
-function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool)
+function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(atype), sparams::SimpleVector, caller::AbsIntState, edgecycle::Bool, edgelimited::Bool, edgerecursed::Bool)
     mi = specialize_method(method, atype, sparams)
     cache_mode = CACHE_MODE_GLOBAL # cache edge targets globally by default
     force_inline = is_stmt_inline(get_curr_ssaflag(caller))
     edge_ci = nothing
     cached, missing_source_edge = lookup_cached_edge(interp, method, mi, caller,
-        force_inline, edgecycle, edgelimited)
+        force_inline, edgecycle, edgelimited, edgerecursed)
     if cached !== nothing
         return cached
     elseif missing_source_edge !== nothing
+        # Reuse a sourceless result only when `mi` is already active in this
+        # interpreter's inference cycle; otherwise local inference may recover source.
+        if edgerecursed && find_call_cycle(interp, mi, caller) !== nothing
+            return return_cached_result(interp, method, missing_source_edge, nothing, caller,
+                edgecycle, edgelimited, edgerecursed)
+        end
         # A globally published executable target exists, but its source was discarded.
         # Re-infer only the source/facts and certify that local work with a local proof.
         cache_mode = CACHE_MODE_LOCAL
@@ -34,9 +40,13 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
     end
     if !InferenceParams(interp).force_enable_inference && ccall(:jl_get_module_infer, Cint, (Any,), method.module) == 0
         add_remark!(interp, caller, "[typeinf_edge] Inference is disabled for the target module")
-        return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited))
+        return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited, edgerecursed))
     end
-    if !is_cached(caller) && frame_parent(caller) === nothing
+    if !edgerecursed && !edgelimited
+        # the callstack walk proved there is no cycle to resolve, as long as
+        # `atype` was not coarsened to an on-stack specialization after that walk
+        frame = false
+    elseif !is_cached(caller) && frame_parent(caller) === nothing
         # this caller exists to return to the user
         # (if we asked resolve_call_cycle!, it might instead detect that there is a cycle that it can't merge)
         frame = false
@@ -50,7 +60,7 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
             ci_from_engine = engine_reserve(interp, mi)
             caller.time_paused += (_time_ns() - reserve_start)
             cached, missing_source_edge = lookup_cached_edge(interp, method, mi, caller,
-                force_inline, edgecycle, edgelimited)
+                force_inline, edgecycle, edgelimited, edgerecursed)
             if cached !== nothing
                 engine_reject(interp, ci_from_engine)
                 return cached
@@ -77,16 +87,16 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
             if ci_from_engine !== nothing
                 engine_reject(interp, ci_from_engine)
             end
-            return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited))
+            return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited, edgerecursed))
         end
         assign_parentchild!(frame, caller)
         # the actual inference task for this edge is going to be scheduled within `typeinf_local` via the callstack queue
         # while splitting off the rest of the work for this caller into a separate workq thunk
-        return _schedule_edge_infer_task!(caller, frame, result, method, edge_ci, edgecycle, edgelimited)
+        return _schedule_edge_infer_task!(caller, frame, result, method, edge_ci, edgecycle, edgelimited, edgerecursed)
     elseif frame === true
         # unresolvable cycle
         add_remark!(interp, caller, "[typeinf_edge] Unresolvable cycle")
-        return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited))
+        return Future(MethodCallResult(interp, caller, method, Any, Any, Effects(), nothing, edgecycle, edgelimited, edgerecursed))
     end
     # return the current knowledge about this cycle
     frame = frame::InferenceState
@@ -102,7 +112,7 @@ function typeinf_edge(interp::FemtoInterpreter, method::Method, @nospecialize(at
         update_valid_age!(caller, get_inference_world(interp), proof_worlds(edge))
     end
     return Future(MethodCallResult(interp, caller, method, bestguess, exc_bestguess, effects,
-        edge, edgecycle, edgelimited;
+        edge, edgecycle, edgelimited, edgerecursed;
         force_edgecycle=false, needs_mi_edge=edge === nothing))
 end
 
