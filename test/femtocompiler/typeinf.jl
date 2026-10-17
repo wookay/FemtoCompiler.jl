@@ -37,10 +37,24 @@ match = only(ms)
 @test match isa Core.MethodMatch
 inst = Base.specialize_method(match)
 @test inst isa MethodInstance
+# from julia/Compiler/src/reinfer.jl
+#=
+# fast-path dispatch_status bit definitions (false indicates unknown)
+# true indicates this method would be returned as the result from `which` when invoking `method.sig` in the current latest world
+const METHOD_SIG_LATEST_WHICH = 0x1
+# true indicates this method would be returned as the only result from `methods` when calling `method_instance.specTypes` in the current latest world
+# it is equivalently tracked as `isempty(interferences)` on a `method`
+const METHOD_SIG_LATEST_ONLY = 0x2
+# true indicates this method is not strictly morespecific than any method it intersects
+# (equivalently, that this method is not in the interference set of any other method without also being in this methods interference set too).
+const METHOD_SIG_NO_LOSERS = 0x4
+=#
+using .CC.ReinferUtils: METHOD_SIG_LATEST_WHICH, METHOD_SIG_LATEST_ONLY, METHOD_SIG_NO_LOSERS
+
 @test inst.dispatch_status == 0x00
 method = match.method
 @test method isa Method
-@test method.dispatch_status == 0x03
+@test method.dispatch_status == METHOD_SIG_LATEST_WHICH | METHOD_SIG_NO_LOSERS
 @test method.sig == Tuple{typeof(f), Int, Int}
 @test only(Base.specializations(method)) === inst
 
@@ -48,7 +62,7 @@ list = methods(f, (Int, Int))
 @test list isa Base.MethodList
 method2 = only(list)
 @test method2 isa Method
-@test method2.dispatch_status == 0x03
+@test method2.dispatch_status == METHOD_SIG_LATEST_WHICH | METHOD_SIG_NO_LOSERS
 @test method2.sig == Tuple{typeof(f), Any, Any}
 inst2 = only(Base.specializations(method2))
 @test inst2.dispatch_status == 0x00
