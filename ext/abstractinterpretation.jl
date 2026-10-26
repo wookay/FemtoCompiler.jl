@@ -225,7 +225,7 @@ function typeinf_local(interp::FemtoInterpreter, frame::InferenceState, nextresu
             end
             if changes !== nothing
                 stoverwrite1!(currstate, changes)
-                update_alias_table!(slot_aliases, stmt, frame.src.code)
+                update_alias_table!(slot_aliases, stmt, frame.src.code, currstate, bbstart, currpc)
             end
             if refinements isa SlotRefinement
                 apply_refinement!(𝕃ᵢ, refinements.slot, refinements.typ, currstate, changes, slot_aliases)
