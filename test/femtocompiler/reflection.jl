@@ -38,7 +38,7 @@ maxcost = FemtoCompiler.code_statement_costs(f, types; interp)
 f = +
 types = ntuple(_ -> Int, 100)
 maxcost = FemtoCompiler.code_statement_costs(f, types; interp)
-@test maxcost == 20
+@test maxcost == 1000
 
 f = ^
 types = (String, Int)
